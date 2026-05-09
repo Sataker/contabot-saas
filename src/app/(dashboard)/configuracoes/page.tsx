@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 
 type Config = {
   tenant: {
@@ -15,6 +16,7 @@ type Config = {
     uazapiInstance: string | null;
     uazapiConnected: boolean;
     driveRootFolderId: string | null;
+    driveEmail: string | null;
   };
   config: {
     horario_inicio: string;
@@ -25,6 +27,7 @@ type Config = {
 };
 
 export default function ConfiguracoesPage() {
+  const searchParams = useSearchParams();
   const [config, setConfig] = useState<Config | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -32,6 +35,8 @@ export default function ConfiguracoesPage() {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [whatsappStatus, setWhatsappStatus] = useState<"checking" | "connected" | "disconnected" | null>(null);
+  const [driveLoading, setDriveLoading] = useState(false);
+  const [driveMessage, setDriveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [form, setForm] = useState({
     contadorNome: "",
     contadorWhatsapp: "",
@@ -64,7 +69,22 @@ export default function ConfiguracoesPage() {
         });
         setWhatsappStatus(data.tenant.uazapiConnected ? "connected" : "disconnected");
       });
-  }, []);
+
+    // Check drive OAuth callback result
+    const driveStatus = searchParams.get("drive");
+    if (driveStatus === "success") {
+      setDriveMessage({ type: "success", text: "Google Drive conectado com sucesso!" });
+    } else if (driveStatus === "error") {
+      const reason = searchParams.get("reason") || "unknown";
+      const messages: Record<string, string> = {
+        not_configured: "OAuth do Google nao configurado no servidor. Adicione GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env",
+        token_exchange: "Falha ao trocar codigo por token. Tente novamente.",
+        missing_params: "Parametros ausentes no callback.",
+        access_denied: "Acesso negado. Voce precisa autorizar o acesso ao Drive.",
+      };
+      setDriveMessage({ type: "error", text: messages[reason] || `Erro na conexao: ${reason}` });
+    }
+  }, [searchParams]);
 
   async function handleSave() {
     setSaving(true);
@@ -119,6 +139,36 @@ export default function ConfiguracoesPage() {
       }
     } catch {
       setWhatsappStatus("disconnected");
+    }
+  }
+
+  async function connectGoogleDrive() {
+    setDriveLoading(true);
+    setDriveMessage(null);
+    try {
+      const res = await fetch("/api/v1/drive/auth");
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setDriveMessage({ type: "error", text: data.error || "Erro ao iniciar conexao" });
+        setDriveLoading(false);
+      }
+    } catch {
+      setDriveMessage({ type: "error", text: "Falha na conexao com o servidor" });
+      setDriveLoading(false);
+    }
+  }
+
+  async function disconnectGoogleDrive() {
+    try {
+      await fetch("/api/v1/drive/disconnect", { method: "POST" });
+      setConfig((prev) =>
+        prev ? { ...prev, tenant: { ...prev.tenant, driveEmail: null, driveRootFolderId: null } } : prev
+      );
+      setDriveMessage({ type: "success", text: "Google Drive desconectado" });
+    } catch {
+      setDriveMessage({ type: "error", text: "Erro ao desconectar" });
     }
   }
 
@@ -279,50 +329,76 @@ export default function ConfiguracoesPage() {
 
       {/* Google Drive */}
       <div className="bg-card border border-card-border rounded-xl p-4 sm:p-6">
-        <h2 className="text-lg font-semibold mb-4">Google Drive</h2>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="flex-1 w-full">
-            <p className="text-sm text-muted mb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+          <h2 className="text-lg font-semibold">Google Drive</h2>
+          {config.tenant.driveEmail ? (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/50 text-green-400 w-fit">Conectado</span>
+          ) : (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400 w-fit">Nao conectado</span>
+          )}
+        </div>
+
+        {driveMessage && (
+          <div className={`mb-4 px-4 py-2.5 rounded-lg text-sm ${
+            driveMessage.type === "success" ? "bg-green-900/30 text-green-400 border border-green-800" : "bg-red-900/30 text-red-400 border border-red-800"
+          }`}>
+            {driveMessage.text}
+          </div>
+        )}
+
+        {config.tenant.driveEmail ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+              <svg className="w-8 h-8 flex-shrink-0" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{config.tenant.driveEmail}</p>
+                <p className="text-xs text-muted truncate">Pasta: ContaBot - Documentos</p>
+              </div>
+            </div>
+            <button
+              onClick={disconnectGoogleDrive}
+              className="px-4 py-2 bg-red-900/50 hover:bg-red-900 text-red-400 rounded-lg text-sm transition-colors"
+            >
+              Desconectar Google Drive
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted">
               Conecte sua conta Google para salvar documentos automaticamente no Drive.
             </p>
-            {form.driveRootFolderId ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/50 text-green-400">Conectado</span>
-                <span className="text-xs text-muted truncate">{form.driveRootFolderId}</span>
-              </div>
-            ) : (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">Nao conectado</span>
-            )}
+            <button
+              onClick={connectGoogleDrive}
+              disabled={driveLoading}
+              className="w-full sm:w-auto flex items-center justify-center gap-3 px-5 py-2.5 bg-white hover:bg-gray-100 text-gray-800 font-medium rounded-lg transition-colors border border-gray-300 disabled:opacity-50"
+            >
+              {driveLoading ? (
+                <>
+                  <svg className="animate-spin w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Conectando...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Entrar com Google
+                </>
+              )}
+            </button>
           </div>
-          <button
-            className="w-full sm:w-auto flex items-center justify-center gap-3 px-5 py-2.5 bg-white hover:bg-gray-100 text-gray-800 font-medium rounded-lg transition-colors border border-gray-300"
-            onClick={() => {
-              // TODO: implementar OAuth Google Drive
-              alert("Integracao Google Drive sera configurada com suas credenciais OAuth. Por enquanto, insira o ID da pasta manualmente abaixo.");
-            }}
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            Entrar com Google
-          </button>
-        </div>
-        {/* Fallback: manual folder ID */}
-        <details className="mt-3">
-          <summary className="text-xs text-muted cursor-pointer hover:text-gray-300">Configurar manualmente (avancado)</summary>
-          <div className="mt-2">
-            <label className="block text-xs text-muted mb-1">ID da Pasta Raiz</label>
-            <input
-              value={form.driveRootFolderId}
-              onChange={(e) => setForm({ ...form, driveRootFolderId: e.target.value })}
-              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm"
-              placeholder="1abc123def..."
-            />
-          </div>
-        </details>
+        )}
       </div>
 
       {/* Escritorio */}

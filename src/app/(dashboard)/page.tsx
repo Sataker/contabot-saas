@@ -48,10 +48,10 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard title="Clientes Ativos" value={totalClientes} color="primary" />
         <StatCard
           title="Documentos no Mes"
@@ -68,9 +68,9 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Documents */}
-        <div className="bg-card border border-card-border rounded-xl p-6">
+        <div className="bg-card border border-card-border rounded-xl p-4 sm:p-6">
           <h2 className="text-lg font-semibold mb-4">Documentos Recentes</h2>
           <div className="space-y-3">
             {recentDocs.length === 0 && (
@@ -105,7 +105,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-card border border-card-border rounded-xl p-6">
+        <div className="bg-card border border-card-border rounded-xl p-4 sm:p-6">
           <h2 className="text-lg font-semibold mb-4">Atividade Recente</h2>
           <div className="space-y-3">
             {recentActivity.length === 0 && (

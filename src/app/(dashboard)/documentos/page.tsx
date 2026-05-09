@@ -38,15 +38,15 @@ export default async function DocumentosPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Documentos</h1>
-        <div className="flex items-center gap-2 text-sm text-muted">
-          <span>{docs.length} documentos</span>
+        <h1 className="text-xl sm:text-2xl font-bold">Documentos</h1>
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted">
+          <span>{docs.length} docs</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {docs.map((doc) => (
           <Link
             key={doc.id}

@@ -21,11 +21,11 @@ export default async function PendenciasPage() {
   const now = new Date();
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Pendencias</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-xl sm:text-2xl font-bold">Pendencias</h1>
 
-      <div className="bg-card border border-card-border rounded-xl overflow-hidden">
-        <table className="w-full">
+      <div className="bg-card border border-card-border rounded-xl overflow-x-auto">
+        <table className="w-full min-w-[600px]">
           <thead>
             <tr className="border-b border-card-border">
               <th className="text-left px-6 py-3 text-xs font-medium text-muted uppercase">Cliente</th>

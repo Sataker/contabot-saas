@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       clientId: client?.id || null,
       tipoDoc: tipoDoc || "outro",
       subtipo,
-      valor,
+      valor: valor != null ? String(valor) : null,
       competencia,
       cnpjEmissor,
       nomeEmissor,

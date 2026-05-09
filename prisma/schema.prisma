@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id               String  @id @default(cuid())
+  nome             String
+  cnpj             String  @unique
+  contadorNome     String  @map("contador_nome")
+  contadorWhatsapp String  @map("contador_whatsapp")
+  plano            String  @default("TRIAL")
+  status           String  @default("TRIAL")
+  config           String  @default("{}")
+  apiKey           String  @unique @map("api_key") @default(cuid())
+  driveRootFolderId String? @map("drive_root_folder_id")
+  uazapiBaseUrl    String? @map("uazapi_base_url") @default("https://spark.uazapi.com")
+  uazapiToken      String? @map("uazapi_token")
+  uazapiInstance   String? @map("uazapi_instance")
+  uazapiConnected  Boolean @default(false) @map("uazapi_connected")
+  stripeCustomerId String? @map("stripe_customer_id")
+  stripeSubId      String? @map("stripe_sub_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  users        User[]
+  clients      Client[]
+  documents    Document[]
+  pendencias   Pendencia[]
+  guias        Guia[]
+  activityLogs ActivityLog[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  nome         String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("users")
+}
+
+model Client {
+  id             String   @id @default(cuid())
+  tenantId       String   @map("tenant_id")
+  nome           String
+  cpfCnpj        String   @map("cpf_cnpj")
+  whatsapp       String
+  email          String?
+  tipo           String   @default("PF")
+  status         String   @default("ATIVO")
+  driveFolderUrl String?  @map("drive_folder_url")
+  observacoes    String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  documents  Document[]
+  pendencias Pendencia[]
+  guias      Guia[]
+
+  @@unique([tenantId, cpfCnpj])
+  @@index([tenantId, whatsapp])
+  @@map("clients")
+}
+
+model Document {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  clientId     String?  @map("client_id")
+  receivedAt   DateTime @default(now()) @map("received_at")
+  tipoDoc      String   @map("tipo_doc")
+  subtipo      String?
+  valor        String?
+  competencia  String?
+  cnpjEmissor  String?  @map("cnpj_emissor")
+  nomeEmissor  String?  @map("nome_emissor")
+  driveUrl     String?  @map("drive_url")
+  confianca    Float    @default(0)
+  status       String   @default("PROCESSADO")
+  resumo       String?
+  createdBy    String?  @map("created_by")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  client Client? @relation(fields: [clientId], references: [id])
+
+  @@index([tenantId, receivedAt])
+  @@index([tenantId, status])
+  @@map("documents")
+}
+
+model Pendencia {
+  id            String    @id @default(cuid())
+  tenantId      String    @map("tenant_id")
+  clientId      String    @map("client_id")
+  tipo          String
+  descricao     String
+  prazo         DateTime?
+  status        String    @default("PENDENTE")
+  ultimoContato DateTime? @map("ultimo_contato")
+  tentativas    Int       @default(0)
+  criadoPor     String?   @map("criado_por")
+  resolvedAt    DateTime? @map("resolved_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  client Client @relation(fields: [clientId], references: [id])
+
+  @@index([tenantId, status])
+  @@map("pendencias")
+}
+
+model Guia {
+  id            String    @id @default(cuid())
+  tenantId      String    @map("tenant_id")
+  clientId      String    @map("client_id")
+  tipoGuia      String    @map("tipo_guia")
+  competencia   String
+  vencimento    DateTime
+  valor         String
+  codigoBarras  String?   @map("codigo_barras")
+  driveUrl      String?   @map("drive_url")
+  status        String    @default("A_ENVIAR")
+  sentAt        DateTime? @map("sent_at")
+  confirmedAt   DateTime? @map("confirmed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  client Client @relation(fields: [clientId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, vencimento])
+  @@map("guias")
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  tenantId   String   @map("tenant_id")
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  action     String
+  details    String   @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@map("activity_logs")
+}

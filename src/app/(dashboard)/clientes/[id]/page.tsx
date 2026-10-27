@@ -1,12 +1,11 @@
-import { auth } from "@/lib/auth";
+import { requireTenantId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
 export default async function ClienteDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await auth();
-  const tenantId = session!.user.tenantId;
+  const tenantId = await requireTenantId();
 
   const cliente = await prisma.client.findFirst({
     where: { id, tenantId },

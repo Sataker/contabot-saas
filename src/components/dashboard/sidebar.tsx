@@ -30,7 +30,7 @@ export function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => voi
         className={`
           fixed top-0 left-0 z-50 h-full w-64 bg-card border-r border-card-border flex flex-col
           transition-transform duration-200 ease-in-out
-          lg:relative lg:translate-x-0 lg:z-auto
+          lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:z-auto
           ${open ? "translate-x-0" : "-translate-x-full"}
         `}
       >

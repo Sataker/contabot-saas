@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { authenticateApi } from "@/lib/api-auth";
+import { pickStrings } from "@/lib/pick";
+import { clientBelongsToTenant } from "@/lib/tenant";
+
+const EDITABLE_FIELDS = [
+  "clientId", "tipoDoc", "subtipo", "valor", "competencia",
+  "cnpjEmissor", "nomeEmissor", "driveUrl", "status", "resumo",
+] as const;
 
 async function getTenantId(req: NextRequest) {
   const tenant = await authenticateApi(req);
@@ -29,10 +36,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const tenantId = await getTenantId(req);
   if (!tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
+  const data = pickStrings(await req.json(), EDITABLE_FIELDS);
+  if (Object.keys(data).length === 0) return NextResponse.json({ error: "No editable fields" }, { status: 400 });
+
+  // A document may only be linked to a client of the same tenant.
+  if (data.clientId && !(await clientBelongsToTenant(data.clientId, tenantId))) {
+    return NextResponse.json({ error: "Client not found" }, { status: 400 });
+  }
+
   const updated = await prisma.document.updateMany({
     where: { id, tenantId },
-    data: body,
+    data,
   });
 
   if (updated.count === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -43,7 +57,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       entityType: "document",
       entityId: id,
       action: "Documento atualizado",
-      details: JSON.stringify(body),
+      details: JSON.stringify(data),
     },
   });
 

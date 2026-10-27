@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3100",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
@@ -17,8 +20,7 @@
     "postcss": "^8.5.14",
     "prisma": "^6.19.3",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "stripe": "^22.1.1"
+    "react-dom": "^19.2.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",
@@ -29,11 +31,10 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4.3.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   },
-  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
-  "main": "index.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "description": "Multi-tenant dashboard for accounting firms: clients, documents, tax slips and pending items, with an API for n8n/WhatsApp automations.",
+  "author": "Enzo Vaccaro",
+  "license": "MIT"
 }

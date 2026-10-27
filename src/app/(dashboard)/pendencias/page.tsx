@@ -1,9 +1,8 @@
-import { auth } from "@/lib/auth";
+import { requireTenantId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export default async function PendenciasPage() {
-  const session = await auth();
-  const tenantId = session!.user.tenantId;
+  const tenantId = await requireTenantId();
 
   const pendencias = await prisma.pendencia.findMany({
     where: { tenantId },

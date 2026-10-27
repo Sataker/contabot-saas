@@ -20,7 +20,7 @@ model Tenant {
   driveRootFolderId  String? @map("drive_root_folder_id")
   driveRefreshToken  String? @map("drive_refresh_token")
   driveEmail         String? @map("drive_email")
-  uazapiBaseUrl    String? @map("uazapi_base_url") @default("https://spark.uazapi.com")
+  uazapiBaseUrl    String? @map("uazapi_base_url")
   uazapiToken      String? @map("uazapi_token")
   uazapiInstance   String? @map("uazapi_instance")
   uazapiConnected  Boolean @default(false) @map("uazapi_connected")

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { authenticateApi } from "@/lib/api-auth";
+import { clientBelongsToTenant } from "@/lib/tenant";
 
 async function getTenantId(req: NextRequest) {
   const tenant = await authenticateApi(req);
@@ -28,6 +29,9 @@ export async function POST(req: NextRequest) {
   if (!tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
+  if (body.clientId && !(typeof body.clientId === "string" && (await clientBelongsToTenant(body.clientId, tenantId)))) {
+    return NextResponse.json({ error: "Client not found" }, { status: 400 });
+  }
   const guia = await prisma.guia.create({
     data: {
       tenantId,

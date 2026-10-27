@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import { compareSync } from "bcryptjs";
+import { redirect } from "next/navigation";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -33,6 +34,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
+  // Self-hosted behind a reverse proxy: trust the Host header (Auth.js rejects it in production otherwise).
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   callbacks: {
@@ -50,3 +53,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 });
+
+/**
+ * Returns the signed-in user's tenant ID, or redirects to /login.
+ * Pages call this themselves because Next.js renders a page in parallel with
+ * its layout, so the layout's redirect alone does not protect the page.
+ */
+export async function requireTenantId(): Promise<string> {
+  const session = await auth();
+  if (!session?.user?.tenantId) redirect("/login");
+  return session.user.tenantId;
+}

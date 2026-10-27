@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { requireTenantId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const requiredDocs = [
@@ -18,8 +18,7 @@ const docLabels: Record<string, string> = {
 };
 
 export default async function IrpfPage() {
-  const session = await auth();
-  const tenantId = session!.user.tenantId;
+  const tenantId = await requireTenantId();
 
   const pfClients = await prisma.client.findMany({
     where: { tenantId, tipo: "PF", status: "ATIVO" },

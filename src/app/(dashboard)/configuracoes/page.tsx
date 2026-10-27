@@ -3,6 +3,25 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 
+type DriveMessage = { type: "success" | "error"; text: string };
+
+const DRIVE_ERRORS: Record<string, string> = {
+  not_configured: "OAuth do Google nao configurado no servidor. Adicione GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env",
+  token_exchange: "Falha ao trocar codigo por token. Tente novamente.",
+  missing_params: "Parametros ausentes no callback.",
+  access_denied: "Acesso negado. Voce precisa autorizar o acesso ao Drive.",
+};
+
+function driveMessageFromParams(params: URLSearchParams): DriveMessage | null {
+  const status = params.get("drive");
+  if (status === "success") return { type: "success", text: "Google Drive conectado com sucesso!" };
+  if (status === "error") {
+    const reason = params.get("reason") || "unknown";
+    return { type: "error", text: DRIVE_ERRORS[reason] || `Erro na conexao: ${reason}` };
+  }
+  return null;
+}
+
 type Config = {
   tenant: {
     id: string;
@@ -36,7 +55,8 @@ export default function ConfiguracoesPage() {
   const [qrError, setQrError] = useState<string | null>(null);
   const [whatsappStatus, setWhatsappStatus] = useState<"checking" | "connected" | "disconnected" | null>(null);
   const [driveLoading, setDriveLoading] = useState(false);
-  const [driveMessage, setDriveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  // Result of the Google Drive OAuth callback, read once from the URL (?drive=success|error&reason=...)
+  const [driveMessage, setDriveMessage] = useState<DriveMessage | null>(() => driveMessageFromParams(searchParams));
   const [form, setForm] = useState({
     contadorNome: "",
     contadorWhatsapp: "",
@@ -58,7 +78,7 @@ export default function ConfiguracoesPage() {
         setForm({
           contadorNome: data.tenant.contadorNome || "",
           contadorWhatsapp: data.tenant.contadorWhatsapp || "",
-          uazapiBaseUrl: data.tenant.uazapiBaseUrl || "https://spark.uazapi.com",
+          uazapiBaseUrl: data.tenant.uazapiBaseUrl || "",
           uazapiToken: data.tenant.uazapiToken || "",
           uazapiInstance: data.tenant.uazapiInstance || "",
           driveRootFolderId: data.tenant.driveRootFolderId || "",
@@ -70,21 +90,7 @@ export default function ConfiguracoesPage() {
         setWhatsappStatus(data.tenant.uazapiConnected ? "connected" : "disconnected");
       });
 
-    // Check drive OAuth callback result
-    const driveStatus = searchParams.get("drive");
-    if (driveStatus === "success") {
-      setDriveMessage({ type: "success", text: "Google Drive conectado com sucesso!" });
-    } else if (driveStatus === "error") {
-      const reason = searchParams.get("reason") || "unknown";
-      const messages: Record<string, string> = {
-        not_configured: "OAuth do Google nao configurado no servidor. Adicione GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env",
-        token_exchange: "Falha ao trocar codigo por token. Tente novamente.",
-        missing_params: "Parametros ausentes no callback.",
-        access_denied: "Acesso negado. Voce precisa autorizar o acesso ao Drive.",
-      };
-      setDriveMessage({ type: "error", text: messages[reason] || `Erro na conexao: ${reason}` });
-    }
-  }, [searchParams]);
+  }, []);
 
   async function handleSave() {
     setSaving(true);
@@ -219,7 +225,7 @@ export default function ConfiguracoesPage() {
               value={form.uazapiBaseUrl}
               onChange={(e) => setForm({ ...form, uazapiBaseUrl: e.target.value })}
               className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm"
-              placeholder="https://spark.uazapi.com"
+              placeholder="https://your-instance.uazapi.com"
             />
           </div>
           <div>

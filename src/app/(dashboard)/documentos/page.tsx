@@ -1,10 +1,9 @@
-import { auth } from "@/lib/auth";
+import { requireTenantId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 
 export default async function DocumentosPage() {
-  const session = await auth();
-  const tenantId = session!.user.tenantId;
+  const tenantId = await requireTenantId();
 
   const docs = await prisma.document.findMany({
     where: { tenantId },

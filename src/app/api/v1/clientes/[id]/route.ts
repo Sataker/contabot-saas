@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { authenticateApi } from "@/lib/api-auth";
+import { pickStrings } from "@/lib/pick";
+
+const EDITABLE_FIELDS = ["nome", "cpfCnpj", "whatsapp", "email", "tipo", "status", "driveFolderUrl", "observacoes"] as const;
 
 async function getTenantId(req: NextRequest) {
   const tenant = await authenticateApi(req);
@@ -29,10 +32,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const tenantId = await getTenantId(req);
   if (!tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
+  const data = pickStrings(await req.json(), EDITABLE_FIELDS);
+  if (Object.keys(data).length === 0) return NextResponse.json({ error: "No editable fields" }, { status: 400 });
+
   const client = await prisma.client.updateMany({
     where: { id, tenantId },
-    data: body,
+    data,
   });
 
   if (client.count === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
